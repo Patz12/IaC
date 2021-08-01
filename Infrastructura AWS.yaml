@@ -1,1 +1,126 @@
-# Código en YAML para deployar la infraestructura
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  
+Parameters:
+  AvailabilityZone:
+    Description: 
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: "us-east2"
+  
+  InstanceTypeParameter:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.medium
+    Description: Elige t2.micro o t2.medium. Por defecto se elige t2.micro.
+
+  
+Resources:
+# Networking
+  Misaby-VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 150.10.0.0/16
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'false'
+      InstanceTenancy: dedicated
+      Tags:
+      - Key: stack
+        Value: production
+  Misaby-RedPublica1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AssignIpv6AddressOnCreation: false
+      AvailabilityZone: "us-east2"
+      CidrBlock: "150.10.0.0/28" # Required
+      Ipv6CidrBlock: "String"
+      MapPublicIpOnLaunch: false
+      OutpostArn: "String"
+      Tags:
+        Tags
+      VpcId: "String" # Required
+  Misaby-RedWeb1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AssignIpv6AddressOnCreation: false
+      AvailabilityZone: "us-east2"
+      CidrBlock: "150.10.0.16/28" # Required
+      Ipv6CidrBlock: "String"
+      MapPublicIpOnLaunch: false
+      OutpostArn: "String"
+      Tags:
+        Tags
+      VpcId: "String" # Required
+  Misaby-RedDB1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AssignIpv6AddressOnCreation: false
+      AvailabilityZone: "us-east2"
+      CidrBlock: "150.10.0.32/28" # Required
+      Ipv6CidrBlock: "String"
+      MapPublicIpOnLaunch: false
+      OutpostArn: "String"
+      Tags:
+        Tags
+      VpcId: "String" # Required
+  Misaby-RedPublica2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AssignIpv6AddressOnCreation: false
+      AvailabilityZone: "us-east2"
+      CidrBlock: "150.10.0.48/28" # Required
+      Ipv6CidrBlock: "String"
+      MapPublicIpOnLaunch: false
+      OutpostArn: "String"
+      Tags:
+        Tags
+      VpcId: "String" # Required
+  Misaby-RedWeb2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AssignIpv6AddressOnCreation: false
+      AvailabilityZone: "us-east2"
+      CidrBlock: "150.10.0.64/28" # Required
+      Ipv6CidrBlock: "String"
+      MapPublicIpOnLaunch: false
+      OutpostArn: "String"
+      Tags:
+        Tags
+      VpcId: "String" # Required
+  Misaby-RedDB2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AssignIpv6AddressOnCreation: false
+      AvailabilityZone: "us-east2"
+      CidrBlock: "150.10.0.64/28" # Required
+      Ipv6CidrBlock: "String"
+      MapPublicIpOnLaunch: false
+      OutpostArn: "String"
+      Tags:
+        Tags
+      VpcId: "String" # Required
+  Misaby-InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        Tags
+  Misaby-NATGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: "String"
+      ConnectivityType: "String"
+      SubnetId: "Misaby-RedPublica1"    # Cambiar a ID arrojada por la subred
+      Tags:
+        Tags
+  Misaby-NATGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: "String"
+      ConnectivityType: "String"
+      SubnetId: "Misaby-RedPublica2"    # Cambiar a ID arrojada por la subred
+      Tags:
+        Tags
+# EC2
+# RDS
+Outputs:
