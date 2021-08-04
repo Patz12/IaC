@@ -1,126 +1,236 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: |
-  
-Parameters:
-  AvailabilityZone:
-    Description: 
-    Type: AWS::EC2::AvailabilityZone::Name
-    Default: "us-east2"
-  
-  InstanceTypeParameter:
-    Type: String
-    Default: t2.micro
-    AllowedValues:
-      - t2.micro
-      - t2.medium
-    Description: Elige t2.micro o t2.medium. Por defecto se elige t2.micro.
 
-  
+Description:  Este template crea una stack de un servidor web con autoscaling y un balanceador de carga. Tambien incluye la infraestructura de redes necesaria para ello, como una VPC NAT gateways, entre otros.
+
+Parameters:
+  NombreStack:
+    Description: El nombre asignado a los recursos para identificarlos facilmente. 
+    Type: String
+    Default: 'Misaby'
+
+  VpcCIDR:
+    Description: Rango de IPs (CIDR) para la VPC
+    Type: String
+    Default: 150.10.0.0/16
+
+  RedPublica1CIDR:
+    Description: Rango de IPs (CIDR) para la subred publica en la primer AZ.
+    Type: String
+    Default: 150.10.0.0/28
+
+  RedPublica2CIDR:
+    Description: Rango de IPs (CIDR) para la subred publica en la segunda AZ.
+    Type: String
+    Default: 150.10.0.16/28
+
+  RedWeb1CIDR:
+    Description: Rango de IPs (CIDR) para la subred privada en la primer AZ.
+    Type: String
+    Default: 150.10.0.32/28
+
+  RedWeb2CIDR:
+    Description: Rango de IPs (CIDR) para la subred privada en la segunda AZ.
+    Type: String
+    Default: 150.10.0.48/28
+
 Resources:
-# Networking
-  Misaby-VPC:
+  VPC:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: 150.10.0.0/16
+      CidrBlock: !Ref VpcCIDR
       EnableDnsSupport: 'true'
-      EnableDnsHostnames: 'false'
-      InstanceTenancy: dedicated
+      EnableDnsHostnames: 'true'
       Tags:
-      - Key: stack
-        Value: production
-  Misaby-RedPublica1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AssignIpv6AddressOnCreation: false
-      AvailabilityZone: "us-east2"
-      CidrBlock: "150.10.0.0/28" # Required
-      Ipv6CidrBlock: "String"
-      MapPublicIpOnLaunch: false
-      OutpostArn: "String"
-      Tags:
-        Tags
-      VpcId: "String" # Required
-  Misaby-RedWeb1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AssignIpv6AddressOnCreation: false
-      AvailabilityZone: "us-east2"
-      CidrBlock: "150.10.0.16/28" # Required
-      Ipv6CidrBlock: "String"
-      MapPublicIpOnLaunch: false
-      OutpostArn: "String"
-      Tags:
-        Tags
-      VpcId: "String" # Required
-  Misaby-RedDB1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AssignIpv6AddressOnCreation: false
-      AvailabilityZone: "us-east2"
-      CidrBlock: "150.10.0.32/28" # Required
-      Ipv6CidrBlock: "String"
-      MapPublicIpOnLaunch: false
-      OutpostArn: "String"
-      Tags:
-        Tags
-      VpcId: "String" # Required
-  Misaby-RedPublica2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AssignIpv6AddressOnCreation: false
-      AvailabilityZone: "us-east2"
-      CidrBlock: "150.10.0.48/28" # Required
-      Ipv6CidrBlock: "String"
-      MapPublicIpOnLaunch: false
-      OutpostArn: "String"
-      Tags:
-        Tags
-      VpcId: "String" # Required
-  Misaby-RedWeb2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AssignIpv6AddressOnCreation: false
-      AvailabilityZone: "us-east2"
-      CidrBlock: "150.10.0.64/28" # Required
-      Ipv6CidrBlock: "String"
-      MapPublicIpOnLaunch: false
-      OutpostArn: "String"
-      Tags:
-        Tags
-      VpcId: "String" # Required
-  Misaby-RedDB2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AssignIpv6AddressOnCreation: false
-      AvailabilityZone: "us-east2"
-      CidrBlock: "150.10.0.64/28" # Required
-      Ipv6CidrBlock: "String"
-      MapPublicIpOnLaunch: false
-      OutpostArn: "String"
-      Tags:
-        Tags
-      VpcId: "String" # Required
-  Misaby-InternetGateway:
+      - Key: name
+        Value: !Sub ${NombreStack} VPC
+
+  InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
-        Tags
-  Misaby-NATGateway1:
+        - Key: Name
+          Value: !Sub ${NombreStack} InternetGW
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+ 
+  RedPublica1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC                                       # Required
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]           # Obtiene la primer AZ de la cuenta
+      CidrBlock: !Ref RedPublica1CIDR                       # Required
+      MapPublicIpOnLaunch: true                             # Red publica
+      Tags:
+        - Key: Name
+          Value: !Sub ${NombreStack} Red Publica (AZ1)
+
+  RedPublica2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC                                       # Required
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]           # Obtiene la segunda AZ de la cuenta
+      CidrBlock: !Ref RedPublica2CIDR                       # Required
+      MapPublicIpOnLaunch: true                             # Red publica
+      Tags:
+        - Key: Name
+          Value: !Sub ${NombreStack} Red Publica (AZ2)
+
+  RedWeb1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]          # Obtiene la primer AZ de la cuenta
+      CidrBlock: !Ref RedWeb1CIDR                           # Required
+      MapPublicIpOnLaunch: false                            # Red Privada
+      Tags:
+        - Key: Name
+          Value: !Sub ${NombreStack} Red Web (AZ1)
+
+  RedWeb2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]          # Obtiene la segunda AZ de la cuenta
+      CidrBlock: !Ref RedWeb2CIDR                           # Required
+      MapPublicIpOnLaunch: false                            # Red Privada
+      Tags:
+        - Key: Name
+          Value: !Sub ${NombreStack} Red Web (AZ2)
+
+  NatGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway2EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway1:
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: "String"
-      ConnectivityType: "String"
-      SubnetId: "Misaby-RedPublica1"    # Cambiar a ID arrojada por la subred
-      Tags:
-        Tags
-  Misaby-NATGateway2:
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref RedPublica1
+
+  NatGateway2:
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: "String"
-      ConnectivityType: "String"
-      SubnetId: "Misaby-RedPublica2"    # Cambiar a ID arrojada por la subred
+      AllocationId: !GetAtt NatGateway2EIP.AllocationId
+      SubnetId: !Ref RedPublica2
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
       Tags:
-        Tags
-# EC2
-# RDS
+        - Key: Name
+          Value: !Sub ${NombreStack} Rutas Publicas
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref RedPublica1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref RedPublica2
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${NombreStack} Rutas Privadas (AZ1)
+
+  DefaultPrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref RedWeb1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${NombreStack} Rutas Privadas (AZ2)
+
+  DefaultPrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref RedWeb2
+
+  NoIngressSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "no-ingress-sg"
+      GroupDescription: "Security group with no ingress rule"
+      VpcId: !Ref VPC
+
 Outputs:
+  VPC:
+    Description: Referencia de la VPC creada
+    Value: !Ref VPC
+
+  PublicSubnets:
+    Description: Lista de redes publicas
+    Value: !Join [ ",", [ !Ref RedPublica1, !Ref RedPublica2 ]]
+
+  PrivateSubnets:
+    Description: Lista de redes privadas
+    Value: !Join [ ",", [ !Ref RedWeb1, !Ref RedWeb2 ]]
+
+  PublicSubnet1:
+    Description: Referencia de la subred publica en la primer AZ
+    Value: !Ref RedPublica1
+
+  PublicSubnet2:
+    Description: Referencia de la subred publica en la segunda AZ
+    Value: !Ref RedPublica2
+
+  PrivateSubnet1:
+    Description: Referencia de la subred privada en la primer AZ
+    Value: !Ref RedWeb1
+
+  PrivateSubnet2:
+    Description: Referencia de la subred privada en la segunda AZ
+    Value: !Ref RedWeb2
+
+  NoIngressSecurityGroup:
+    Description: Security group sin reglas de ingreso
+    Value: !Ref NoIngressSecurityGroup
