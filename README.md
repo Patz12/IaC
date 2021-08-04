@@ -3,10 +3,11 @@
 ## Progreso
 
 - Componetes de red
-  - [ ] Subredes
-  - [ ] Internet Gateway
-  - [ ] NAT Gateway
-
+  - [x] VPC
+  - [x] Subredes
+  - [x] Internet Gateway
+  - [x] NAT Gateway
+  
 - EC2
   - [ ] Web server
   - [ ] Load Balancer
@@ -15,28 +16,26 @@
 - Opcionales
   - [ ] Security groups
   - [ ] AMIs
-  - [ ] Cuenta específica para IaC
+  - [x] Cuenta específica para IaC
+
+### Referencias
+
+- [Anatomia de un template](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html)
+- [Parametros](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html)
+- [Outputs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)
+- [Ejemplo de networking](https://docs.aws.amazon.com/codebuild/latest/userguide/cloudformation-vpc-template.html)
+- [Ejemplo de autoscaling y loadbalancer](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/quickref-autoscaling.html)
 
 ## Instrucciones
 
-Usando la herramienta de IaC de su preferencia crear la misma infraestructura usada para el proyecto de la unidad 2
-**Terraform o Cloudformation**
-Los cambios a la infraestructura deberán estar almacenados y con seguimiento adecuando en un repositorio de GIT con commits de ambos participantes del proyecto.
-*Deberá subir a esta asignación un documento con evidencias de la ejecución de las herramientas de IaC para la creación de la infraestructura.*
-
-### Crear la Stack
+- **Crear la Stack**
 
 ```bash
-# Comandos para crear la Stack en AWS
+aws cloudformation deploy --template-file '.Infrastructura AWS.yaml' --stack-name Proyecto3
 ```
 
-### Destruir la Stack
+- **Destruir la Stack**
 
 ```bash
-# Comandos para destruir la Stack en AWS
+aws cloudformation delete-stack --stack-name Proyecto3
 ```
-
-Integrantes:
-
-- Misael Alejandro Martínez Velázquez
-- Perla Ruby Licona Lopez
