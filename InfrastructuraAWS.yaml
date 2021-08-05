@@ -62,6 +62,7 @@ Parameters:
     Default: ami-00773c07a04ff93f0
 
 Resources:
+# Networking
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -256,7 +257,7 @@ Resources:
     Properties:
       RouteTableId: !Ref PrivateRouteTable2
       SubnetId: !Ref RedBD2
-
+# Security Groups
   NoIngressSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -346,7 +347,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${NombreStack} BDSecurityGroup
- 
+# AutoScaling 
   LaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
@@ -380,7 +381,7 @@ Resources:
         - Key: Name
           Value: !Sub ${NombreStack} Instance
           PropagateAtLaunch: true
-
+# LoadBalancer
   TargetGroup1:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
