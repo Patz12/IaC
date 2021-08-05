@@ -64,7 +64,7 @@ Resources:
       EnableDnsSupport: 'true'
       EnableDnsHostnames: 'true'
       Tags:
-      - Key: name
+      - Key: Name
         Value: !Sub ${NombreStack} VPC
 
   InternetGateway:
@@ -269,7 +269,7 @@ Resources:
         ToPort: 80
         CidrIp: 0.0.0.0/0
       Tags:
-        - Key: name
+        - Key: Name
           Value: !Sub ${NombreStack} LoadBalancerSecurityGroup
   
   WebServerSG:
@@ -296,7 +296,7 @@ Resources:
         ToPort: 3306
         CidrIp: !Ref RedWeb2CIDR
       Tags:
-        - Key: name
+        - Key: Name
           Value: !Sub ${NombreStack} WebSecurityGroup
 
   DBServerSG:
@@ -339,40 +339,45 @@ Resources:
           ToPort: 80
           CidrIp: !Ref RedPublica2CIDR 
       Tags:
-        - Key: name
+        - Key: Name
           Value: !Sub ${NombreStack} BDSecurityGroup
 
-  LaunchTemplate:
-    Type: AWS::EC2::LaunchTemplate
+
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      LaunchTemplateName: !Sub ${NombreStack}-Launch-Template
-      LaunchTemplateData:
-        DisableApiTermination: true
-        ImageId: ami-0eddae5bc7d97abed
-        InstanceType: !Ref InstanceTier
-        KeyName: !Ref SSHKeyWeb
-        SecurityGroupIds:
-          - !Ref WebServerSG
+      LaunchConfigurationName: !Sub ${NombreStack}-LaunchConfig
+      AssociatePublicIpAddress: false
+      ImageId: ami-0eddae5bc7d97abed
+      KeyName: !Ref SSHKeyWeb
+      SecurityGroups: !Ref WebServerSG
+      InstanceType: !Ref InstanceTier
+      InstanceMonitoring: false
+      Tags:
+      - Key: Name
+        Value: !Sub ${NombreStack} Launch Config
 
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
+      AutoScalingGroupName: !Sub ${NombreStack} AutoScalingGroupString
       VPCZoneIdentifier:
         - !Ref RedWeb1
         - !Ref RedWeb2
-      LaunchTemplate:
-        LaunchTemplateId: !Ref LaunchTemplate
-        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      LaunchConfigurationName: !Ref LaunchConfig
+#      LaunchTemplate:
+#        LaunchTemplateId: !Ref LaunchTemplate
+#        Version: !GetAtt LaunchTemplate.LatestVersionNumber
       MinSize: 1
       MaxSize: 3
       DesiredCapacity: 2
       HealthCheckGracePeriod: 300
       MaxInstanceLifetime: 2592000
-      PropagateAtLaunch: true
+      #PropagateAtLaunch: true
       TargetGroupARNs: 
         - !Ref LoadBalancer
       Tags:
-        - Key: name
+        - Key: Name
           Value: !Sub ${NombreStack} AutoScalingGroup
 
   HTTPlistener:
@@ -401,7 +406,7 @@ Resources:
         - !Ref RedWeb2
       Type: application
       Tags: 
-        - Key: name
+        - Key: Name
           Value: !Sub ${NombreStack} Load Balancer
 
 Outputs:
