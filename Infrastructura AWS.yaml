@@ -56,6 +56,11 @@ Parameters:
     Description: La llave SSH a utilizar para los servidores Web.
     Default: WebServers
 
+  IdAMI:
+    Type: String
+    Description: Id de AMI a utilizar para las instancias. Por defecto crea un server Apache (ami-00773c07a04ff93f0)
+    Default: ami-00773c07a04ff93f0
+
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -259,15 +264,23 @@ Resources:
       GroupDescription: "Security group para el load balancer"
       VpcId: !Ref VPC
       SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
-      - IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
           Value: !Sub ${NombreStack} LoadBalancerSecurityGroup
@@ -348,7 +361,15 @@ Resources:
       LaunchTemplateName: !Sub ${NombreStack}-Launch-Template
       LaunchTemplateData:
         DisableApiTermination: true
-        ImageId: ami-0eddae5bc7d97abed
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            AssociatePublicIpAddress: false
+            Groups:
+              - !Ref WebServerSG
+            DeleteOnTermination: true
+        Placement:
+          Tenancy: dedicated
+        ImageId: !Ref IdAMI
         InstanceType: !Ref InstanceTier
         KeyName: !Ref SSHKeyWeb
         SecurityGroupIds:
@@ -357,7 +378,7 @@ Resources:
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      AutoScalingGroupName: !Sub ${NombreStack} AutoScalingGroupString
+      # AutoScalingGroupName: !Sub ${NombreStack} AutoScalingGroupString
       VPCZoneIdentifier:
         - !Ref RedWeb1
         - !Ref RedWeb2
@@ -370,11 +391,30 @@ Resources:
       HealthCheckGracePeriod: 300
       MaxInstanceLifetime: 2592000
       TargetGroupARNs:
-        - !Ref LoadBalancer
+        - !Ref TargetGroup
       Tags:
         - Key: Name
           Value: !Sub ${NombreStack} Instance
           PropagateAtLaunch: true
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: '/var/www/html'
+      HealthCheckPort: 80
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 4
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      TargetType: instance
+      Tags:
+        - Key: Name
+          Value: !Sub ${NombreStack} TargetGroup
 
   HTTPlistener:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
@@ -389,7 +429,7 @@ Resources:
             Query: "#{query}"
             StatusCode: "HTTP_301"
       LoadBalancerArn: !Ref LoadBalancer
-      Port: 80
+      Port: 443
       Protocol: "HTTP"
 
   LoadBalancer:
