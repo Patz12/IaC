@@ -146,29 +146,29 @@ Resources:
         - Key: Name
           Value: !Sub ${NombreStack} Red BD (AZ2)
 
-  NatGateway1EIP:
-    Type: AWS::EC2::EIP
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      Domain: vpc
+  #  NatGateway1EIP:
+    #    Type: AWS::EC2::EIP
+    #    DependsOn: InternetGatewayAttachment
+    #    Properties:
+    #      Domain: vpc
 
-  NatGateway2EIP:
-    Type: AWS::EC2::EIP
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      Domain: vpc
+  #  NatGateway2EIP:
+    #    Type: AWS::EC2::EIP
+    #    DependsOn: InternetGatewayAttachment
+    #    Properties:
+    #      Domain: vpc
 
-  NatGateway1:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatGateway1EIP.AllocationId
-      SubnetId: !Ref RedPublica1
+  # NatGateway1:
+    # Type: AWS::EC2::NatGateway
+    # Properties:
+      # AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      # SubnetId: !Ref RedPublica1
 
-  NatGateway2:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatGateway2EIP.AllocationId
-      SubnetId: !Ref RedPublica2
+  # NatGateway2:
+    # Type: AWS::EC2::NatGateway
+    # Properties:
+      # AllocationId: !GetAtt NatGateway2EIP.AllocationId
+      # SubnetId: !Ref RedPublica2
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
@@ -190,17 +190,25 @@ Resources:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
-      SubnetId: 
-      - !Ref RedPublica1
-      - !Ref RedWeb1
+      SubnetId: !Ref RedPublica1
 
   PublicSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
-      SubnetId: 
-      - !Ref RedPublica2
-      - !Ref RedWeb2
+      SubnetId: !Ref RedPublica2
+
+  Web1Subnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref RedWeb1
+
+  Web2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref RedWeb2
 
   PrivateRouteTable1:
     Type: AWS::EC2::RouteTable
@@ -210,12 +218,12 @@ Resources:
         - Key: Name
           Value: !Sub ${NombreStack} Rutas Privadas (AZ1)
 
-  DefaultPrivateRoute1:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable1
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGateway1
+  # DefaultPrivateRoute1:
+    # Type: AWS::EC2::Route
+    # Properties:
+      # RouteTableId: !Ref PrivateRouteTable1
+      # DestinationCidrBlock: 0.0.0.0/0
+      # NatGatewayId: !Ref NatGateway1
 
   PrivateSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -231,12 +239,12 @@ Resources:
         - Key: Name
           Value: !Sub ${NombreStack} Rutas Privadas (AZ2)
 
-  DefaultPrivateRoute2:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable2
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGateway2
+  # DefaultPrivateRoute2:
+    # Type: AWS::EC2::Route
+    # Properties:
+      # RouteTableId: !Ref PrivateRouteTable2
+      # DestinationCidrBlock: 0.0.0.0/0
+      # NatGatewayId: !Ref NatGateway2
 
   PrivateSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -346,19 +354,19 @@ Resources:
         SecurityGroupIds:
           - !Ref WebServerSG
 
-#  LaunchConfig:
-  #  Type: AWS::AutoScaling::LaunchConfiguration
-  #  Properties:
-  #    LaunchConfigurationName: !Sub ${NombreStack} LaunchConfig
-  #    AssociatePublicIpAddress: false
-  #    ImageId: ami-0eddae5bc7d97abed
-  #    KeyName: !Ref SSHKeyWeb
-  #    SecurityGroups: !Ref WebServerSG
-  #    InstanceType: !Ref InstanceTier
-  #    InstanceMonitoring: false
-  #    Tags:
-  #      - name:
-  #        Value: !Sub ${NombreStack} Launch Config
+  # LaunchConfig:
+    #  Type: AWS::AutoScaling::LaunchConfiguration
+    #  Properties:
+    #    LaunchConfigurationName: !Sub ${NombreStack} LaunchConfig
+    #    AssociatePublicIpAddress: false
+    #    ImageId: ami-0eddae5bc7d97abed
+    #    KeyName: !Ref SSHKeyWeb
+    #    SecurityGroups: !Ref WebServerSG
+    #    InstanceType: !Ref InstanceTier
+    #    InstanceMonitoring: false
+    #    Tags:
+    #      - name:
+    #        Value: !Sub ${NombreStack} Launch Config
 
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -366,12 +374,17 @@ Resources:
       VPCZoneIdentifier:
         - !Ref RedWeb1
         - !Ref RedWeb2
-      LaunchTemplate: !Ref LaunchTemplate
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: 1
       MinSize: 1
       MaxSize: 3
       DesiredCapacity: 2
       HealthCheckGracePeriod: 300
       MaxInstanceLifetime: 2592000
+      PropagateAtLaunch: true
+      TargetGroupARNs: 
+        - !Ref LoadBalancer
       Tags:
         - Key: name
           Value: !Sub ${NombreStack} AutoScalingGroup
@@ -384,8 +397,8 @@ Resources:
       SecurityGroups:
         - !Ref NoIngressSecurityGroup
       Subnets: 
-        - !Ref RedWeb1
-        - !Ref RedWeb2
+        - !Ref RedWeb1CIDR
+        - !Ref RedWeb2CIDR
       Tags: 
         - name:
           Value: !Sub ${NombreStack} Load Balancer
