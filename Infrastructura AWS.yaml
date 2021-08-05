@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: 2010-09-09
+#AWSTemplateFormatVersion: 2010-09-09
 
 Description:  Este template crea una stack de un servidor web con autoscaling y un balanceador de carga. Tambien incluye la infraestructura de redes necesaria para ello, como una VPC NAT gateways, entre otros.
 
@@ -64,7 +64,7 @@ Resources:
       EnableDnsSupport: 'true'
       EnableDnsHostnames: 'true'
       Tags:
-      - Key: name
+      - Key: Name
         Value: !Sub ${NombreStack} VPC
 
   InternetGateway:
@@ -269,7 +269,7 @@ Resources:
         ToPort: 80
         CidrIp: 0.0.0.0/0
       Tags:
-        - Key: name
+        - Key: Name
           Value: !Sub ${NombreStack} LoadBalancerSecurityGroup
   
   WebServerSG:
@@ -296,7 +296,7 @@ Resources:
         ToPort: 3306
         CidrIp: !Ref RedWeb2CIDR
       Tags:
-        - Key: name
+        - Key: Name
           Value: !Sub ${NombreStack} WebSecurityGroup
 
   DBServerSG:
@@ -339,9 +339,9 @@ Resources:
           ToPort: 80
           CidrIp: !Ref RedPublica2CIDR 
       Tags:
-        - Key: name
+        - Key: Name
           Value: !Sub ${NombreStack} BDSecurityGroup
-
+ 
   LaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
@@ -357,6 +357,7 @@ Resources:
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
+      AutoScalingGroupName: !Sub ${NombreStack} AutoScalingGroupString
       VPCZoneIdentifier:
         - !Ref RedWeb1
         - !Ref RedWeb2
@@ -368,12 +369,12 @@ Resources:
       DesiredCapacity: 2
       HealthCheckGracePeriod: 300
       MaxInstanceLifetime: 2592000
-      PropagateAtLaunch: true
-      TargetGroupARNs: 
+      TargetGroupARNs:
         - !Ref LoadBalancer
       Tags:
-        - Key: name
-          Value: !Sub ${NombreStack} AutoScalingGroup
+        - Key: Name
+          Value: !Sub ${NombreStack} Instance
+          PropagateAtLaunch: true
 
   HTTPlistener:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
@@ -401,7 +402,7 @@ Resources:
         - !Ref RedWeb2
       Type: application
       Tags: 
-        - Key: name
+        - Key: Name
           Value: !Sub ${NombreStack} Load Balancer
 
 Outputs:
@@ -448,3 +449,15 @@ Outputs:
   DBSecurityGroup:
     Description: Security group para bases de datos
     Value: !Ref DBServerSG
+
+  LaunchTemplate:
+    Description: Referencia del Launch Template
+    Value: !Ref LaunchTemplate
+
+  AutoScalingGroup:
+    Description: Referencia del AutoScalingGroup
+    Value: !Ref AutoScalingGroup
+
+  LoadBalancer:
+    Description: Referencia del LoadBalancer
+    Value: !Ref LoadBalancer
