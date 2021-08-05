@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: 2010-09-09
+#AWSTemplateFormatVersion: 2010-09-09
 
 Description:  Este template crea una stack de un servidor web con autoscaling y un balanceador de carga. Tambien incluye la infraestructura de redes necesaria para ello, como una VPC NAT gateways, entre otros.
 
@@ -341,21 +341,18 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${NombreStack} BDSecurityGroup
-
-
-  LaunchConfig:
-    Type: AWS::AutoScaling::LaunchConfiguration
+ 
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
     Properties:
-      LaunchConfigurationName: !Sub ${NombreStack}-LaunchConfig
-      AssociatePublicIpAddress: false
-      ImageId: ami-0eddae5bc7d97abed
-      KeyName: !Ref SSHKeyWeb
-      SecurityGroups: !Ref WebServerSG
-      InstanceType: !Ref InstanceTier
-      InstanceMonitoring: false
-      Tags:
-      - Key: Name
-        Value: !Sub ${NombreStack} Launch Config
+      LaunchTemplateName: !Sub ${NombreStack}-Launch-Template
+      LaunchTemplateData:
+        DisableApiTermination: true
+        ImageId: ami-0eddae5bc7d97abed
+        InstanceType: !Ref InstanceTier
+        KeyName: !Ref SSHKeyWeb
+        SecurityGroupIds:
+          - !Ref WebServerSG
 
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -364,21 +361,20 @@ Resources:
       VPCZoneIdentifier:
         - !Ref RedWeb1
         - !Ref RedWeb2
-      LaunchConfigurationName: !Ref LaunchConfig
-#      LaunchTemplate:
-#        LaunchTemplateId: !Ref LaunchTemplate
-#        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
       MinSize: 1
       MaxSize: 3
       DesiredCapacity: 2
       HealthCheckGracePeriod: 300
       MaxInstanceLifetime: 2592000
-      #PropagateAtLaunch: true
-      TargetGroupARNs: 
+      TargetGroupARNs:
         - !Ref LoadBalancer
       Tags:
         - Key: Name
-          Value: !Sub ${NombreStack} AutoScalingGroup
+          Value: !Sub ${NombreStack} Instance
+          PropagateAtLaunch: true
 
   HTTPlistener:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
@@ -453,3 +449,15 @@ Outputs:
   DBSecurityGroup:
     Description: Security group para bases de datos
     Value: !Ref DBServerSG
+
+  LaunchTemplate:
+    Description: Referencia del Launch Template
+    Value: !Ref LaunchTemplate
+
+  AutoScalingGroup:
+    Description: Referencia del AutoScalingGroup
+    Value: !Ref AutoScalingGroup
+
+  LoadBalancer:
+    Description: Referencia del LoadBalancer
+    Value: !Ref LoadBalancer
