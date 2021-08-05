@@ -24,14 +24,37 @@ Parameters:
     Default: 150.10.0.16/28
 
   RedWeb1CIDR:
-    Description: Rango de IPs (CIDR) para la subred privada en la primer AZ.
+    Description: Rango de IPs (CIDR) para la subred WEB en la primer AZ.
     Type: String
     Default: 150.10.0.32/28
 
   RedWeb2CIDR:
-    Description: Rango de IPs (CIDR) para la subred privada en la segunda AZ.
+    Description: Rango de IPs (CIDR) para la subred WEB en la segunda AZ.
     Type: String
     Default: 150.10.0.48/28
+
+  RedBD1CIDR:
+    Description: Rango de IPs (CIDR) para la subred privada de BDs en la primer AZ.
+    Type: String
+    Default: 150.10.0.64/28
+
+  RedBD2CIDR:
+    Description: Rango de IPs (CIDR) para la subred privada de BDs en la segunda AZ.
+    Type: String
+    Default: 150.10.0.80/28
+
+  InstanceTier:
+    Type: String
+    Default: t2.medium
+    AllowedValues:
+      - t2.micro
+      - t2.medium
+    Description: El tier de las máquinas, pueden ser t2.micro o t2.medium. Por defecto se elige t2.micro.
+
+  SSHKeyWeb:
+    Type: String
+    Description: La llave SSH a utilizar para los servidores Web.
+    Default: WebServers
 
 Resources:
   VPC:
@@ -85,7 +108,7 @@ Resources:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [ 0, !GetAZs  '' ]          # Obtiene la primer AZ de la cuenta
       CidrBlock: !Ref RedWeb1CIDR                           # Required
-      MapPublicIpOnLaunch: false                            # Red Privada
+      MapPublicIpOnLaunch: true                             # Red Publica
       Tags:
         - Key: Name
           Value: !Sub ${NombreStack} Red Web (AZ1)
@@ -96,34 +119,56 @@ Resources:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [ 1, !GetAZs  '' ]          # Obtiene la segunda AZ de la cuenta
       CidrBlock: !Ref RedWeb2CIDR                           # Required
-      MapPublicIpOnLaunch: false                            # Red Privada
+      MapPublicIpOnLaunch: true                             # Red Publica
       Tags:
         - Key: Name
           Value: !Sub ${NombreStack} Red Web (AZ2)
 
-  NatGateway1EIP:
-    Type: AWS::EC2::EIP
-    DependsOn: InternetGatewayAttachment
+  RedBD1:
+    Type: AWS::EC2::Subnet
     Properties:
-      Domain: vpc
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]          # Obtiene la primer AZ de la cuenta
+      CidrBlock: !Ref RedBD1CIDR                            # Required
+      MapPublicIpOnLaunch: false                            # Red Privada
+      Tags:
+        - Key: Name
+          Value: !Sub ${NombreStack} Red BD (AZ1)
 
-  NatGateway2EIP:
-    Type: AWS::EC2::EIP
-    DependsOn: InternetGatewayAttachment
+  RedBD2:
+    Type: AWS::EC2::Subnet
     Properties:
-      Domain: vpc
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]          # Obtiene la segunda AZ de la cuenta
+      CidrBlock: !Ref RedBD2CIDR                            # Required
+      MapPublicIpOnLaunch: false                            # Red Privada
+      Tags:
+        - Key: Name
+          Value: !Sub ${NombreStack} Red BD (AZ2)
 
-  NatGateway1:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatGateway1EIP.AllocationId
-      SubnetId: !Ref RedPublica1
+  #  NatGateway1EIP:
+    #    Type: AWS::EC2::EIP
+    #    DependsOn: InternetGatewayAttachment
+    #    Properties:
+    #      Domain: vpc
 
-  NatGateway2:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatGateway2EIP.AllocationId
-      SubnetId: !Ref RedPublica2
+  #  NatGateway2EIP:
+    #    Type: AWS::EC2::EIP
+    #    DependsOn: InternetGatewayAttachment
+    #    Properties:
+    #      Domain: vpc
+
+  # NatGateway1:
+    # Type: AWS::EC2::NatGateway
+    # Properties:
+      # AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      # SubnetId: !Ref RedPublica1
+
+  # NatGateway2:
+    # Type: AWS::EC2::NatGateway
+    # Properties:
+      # AllocationId: !GetAtt NatGateway2EIP.AllocationId
+      # SubnetId: !Ref RedPublica2
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
@@ -153,6 +198,18 @@ Resources:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref RedPublica2
 
+  Web1Subnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref RedWeb1
+
+  Web2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref RedWeb2
+
   PrivateRouteTable1:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -161,18 +218,18 @@ Resources:
         - Key: Name
           Value: !Sub ${NombreStack} Rutas Privadas (AZ1)
 
-  DefaultPrivateRoute1:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable1
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGateway1
+  # DefaultPrivateRoute1:
+    # Type: AWS::EC2::Route
+    # Properties:
+      # RouteTableId: !Ref PrivateRouteTable1
+      # DestinationCidrBlock: 0.0.0.0/0
+      # NatGatewayId: !Ref NatGateway1
 
   PrivateSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateRouteTable1
-      SubnetId: !Ref RedWeb1
+      SubnetId: !Ref RedBD1
 
   PrivateRouteTable2:
     Type: AWS::EC2::RouteTable
@@ -182,25 +239,170 @@ Resources:
         - Key: Name
           Value: !Sub ${NombreStack} Rutas Privadas (AZ2)
 
-  DefaultPrivateRoute2:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable2
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGateway2
+  # DefaultPrivateRoute2:
+    # Type: AWS::EC2::Route
+    # Properties:
+      # RouteTableId: !Ref PrivateRouteTable2
+      # DestinationCidrBlock: 0.0.0.0/0
+      # NatGatewayId: !Ref NatGateway2
 
   PrivateSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateRouteTable2
-      SubnetId: !Ref RedWeb2
+      SubnetId: !Ref RedBD2
 
   NoIngressSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: "no-ingress-sg"
-      GroupDescription: "Security group with no ingress rule"
+      GroupDescription: "Security group para el load balancer"
       VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: name
+          Value: !Sub ${NombreStack} LoadBalancerSecurityGroup
+  
+  WebServerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Permite http de todos lados y SQL desde las bases de datos.
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 3306
+        ToPort: 3306
+        CidrIp: !Ref RedWeb1CIDR
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 3306
+        ToPort: 3306
+        CidrIp: !Ref RedWeb2CIDR
+      Tags:
+        - Key: name
+          Value: !Sub ${NombreStack} WebSecurityGroup
+
+  DBServerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Permite SQL desde servidores WEB y trafico desde la NAT.
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: !Ref RedPublica1CIDR
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: !Ref RedPublica2CIDR
+        - IpProtocol: tcp    
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref RedPublica1CIDR
+        - IpProtocol: tcp    
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref RedPublica2CIDR 
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: !Ref RedPublica1CIDR
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: !Ref RedPublica2CIDR
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref RedPublica1CIDR
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref RedPublica2CIDR 
+      Tags:
+        - Key: name
+          Value: !Sub ${NombreStack} BDSecurityGroup
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub ${NombreStack}-Launch-Template
+      LaunchTemplateData:
+        DisableApiTermination: true
+        ImageId: ami-0eddae5bc7d97abed
+        InstanceType: !Ref InstanceTier
+        KeyName: !Ref SSHKeyWeb
+        SecurityGroupIds:
+          - !Ref WebServerSG
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+        - !Ref RedWeb1
+        - !Ref RedWeb2
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      MinSize: 1
+      MaxSize: 3
+      DesiredCapacity: 2
+      HealthCheckGracePeriod: 300
+      MaxInstanceLifetime: 2592000
+      PropagateAtLaunch: true
+      TargetGroupARNs: 
+        - !Ref LoadBalancer
+      Tags:
+        - Key: name
+          Value: !Sub ${NombreStack} AutoScalingGroup
+
+  HTTPlistener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      DefaultActions:
+        - Type: "redirect"
+          RedirectConfig:
+            Protocol: "HTTPS"
+            Port: 443
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: "HTTP_301"
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: "HTTP"
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      SecurityGroups:
+        - !Ref NoIngressSecurityGroup
+      Subnets:
+        - !Ref RedWeb1
+        - !Ref RedWeb2
+      Type: application
+      Tags: 
+        - Key: name
+          Value: !Sub ${NombreStack} Load Balancer
 
 Outputs:
   VPC:
@@ -210,10 +412,14 @@ Outputs:
   PublicSubnets:
     Description: Lista de redes publicas
     Value: !Join [ ",", [ !Ref RedPublica1, !Ref RedPublica2 ]]
+  
+  WebSubnets:
+    Description: Lista de redes publicas para web
+    Value: !Join [ ",", [ !Ref RedWeb1, !Ref RedWeb2 ]]
 
   PrivateSubnets:
     Description: Lista de redes privadas
-    Value: !Join [ ",", [ !Ref RedWeb1, !Ref RedWeb2 ]]
+    Value: !Join [ ",", [ !Ref RedBD1, !Ref RedBD2 ]]
 
   PublicSubnet1:
     Description: Referencia de la subred publica en la primer AZ
@@ -225,12 +431,20 @@ Outputs:
 
   PrivateSubnet1:
     Description: Referencia de la subred privada en la primer AZ
-    Value: !Ref RedWeb1
+    Value: !Ref RedBD1
 
   PrivateSubnet2:
     Description: Referencia de la subred privada en la segunda AZ
-    Value: !Ref RedWeb2
+    Value: !Ref RedBD2
 
   NoIngressSecurityGroup:
-    Description: Security group sin reglas de ingreso
+    Description: Security group para el load balancer
     Value: !Ref NoIngressSecurityGroup
+
+  WebSecurityGroup:
+    Description: Security group para servidor web
+    Value: !Ref WebServerSG
+
+  DBSecurityGroup:
+    Description: Security group para bases de datos
+    Value: !Ref DBServerSG
