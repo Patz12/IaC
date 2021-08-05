@@ -268,18 +268,10 @@ Resources:
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 443
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
@@ -361,14 +353,6 @@ Resources:
       LaunchTemplateName: !Sub ${NombreStack}-Launch-Template
       LaunchTemplateData:
         DisableApiTermination: true
-        NetworkInterfaces:
-          - DeviceIndex: 0
-            AssociatePublicIpAddress: false
-            Groups:
-              - !Ref WebServerSG
-            DeleteOnTermination: true
-        Placement:
-          Tenancy: dedicated
         ImageId: !Ref IdAMI
         InstanceType: !Ref InstanceTier
         KeyName: !Ref SSHKeyWeb
