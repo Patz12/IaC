@@ -10,13 +10,14 @@
   
 - EC2
   - [x] Web server
-  - [ ] Load Balancer
-  - [ ] Autoscaling groups
+  - [x] Load Balancer
+  - [x] Autoscaling groups
   - [x] Security groups
 
 - Opcionales
   - [x] AMIs
   - [x] Cuenta específica para IaC
+  - [ ] Diagrama de la infraestructura
 
 ### Referencias
 
@@ -31,11 +32,11 @@
 - **Crear la Stack**
 
 ```bash
-aws cloudformation deploy --template-file '.Infrastructura AWS.yaml' --stack-name Proyecto3
+aws cloudformation deploy --template-file './InfrastructuraAWS.yaml' --stack-name IaC
 ```
 
 - **Destruir la Stack**
 
 ```bash
-aws cloudformation delete-stack --stack-name Proyecto3
+aws cloudformation delete-stack --stack-name IaC
 ```
