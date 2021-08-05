@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: 2010-09-09
+#AWSTemplateFormatVersion: 2010-09-09
 
 Description:  Este template crea una stack de un servidor web con autoscaling y un balanceador de carga. Tambien incluye la infraestructura de redes necesaria para ello, como una VPC NAT gateways, entre otros.
 
@@ -56,6 +56,11 @@ Parameters:
     Description: La llave SSH a utilizar para los servidores Web.
     Default: WebServers
 
+  IdAMI:
+    Type: String
+    Description: Id de AMI a utilizar para las instancias. Por defecto crea un server Apache (ami-00773c07a04ff93f0)
+    Default: ami-00773c07a04ff93f0
+
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -64,7 +69,7 @@ Resources:
       EnableDnsSupport: 'true'
       EnableDnsHostnames: 'true'
       Tags:
-      - Key: name
+      - Key: Name
         Value: !Sub ${NombreStack} VPC
 
   InternetGateway:
@@ -146,29 +151,29 @@ Resources:
         - Key: Name
           Value: !Sub ${NombreStack} Red BD (AZ2)
 
-  #  NatGateway1EIP:
-    #    Type: AWS::EC2::EIP
-    #    DependsOn: InternetGatewayAttachment
-    #    Properties:
-    #      Domain: vpc
+  NatGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
 
-  #  NatGateway2EIP:
-    #    Type: AWS::EC2::EIP
-    #    DependsOn: InternetGatewayAttachment
-    #    Properties:
-    #      Domain: vpc
+  NatGateway2EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
 
-  # NatGateway1:
-    # Type: AWS::EC2::NatGateway
-    # Properties:
-      # AllocationId: !GetAtt NatGateway1EIP.AllocationId
-      # SubnetId: !Ref RedPublica1
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref RedPublica1
 
-  # NatGateway2:
-    # Type: AWS::EC2::NatGateway
-    # Properties:
-      # AllocationId: !GetAtt NatGateway2EIP.AllocationId
-      # SubnetId: !Ref RedPublica2
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway2EIP.AllocationId
+      SubnetId: !Ref RedPublica2
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
@@ -218,12 +223,12 @@ Resources:
         - Key: Name
           Value: !Sub ${NombreStack} Rutas Privadas (AZ1)
 
-  # DefaultPrivateRoute1:
-    # Type: AWS::EC2::Route
-    # Properties:
-      # RouteTableId: !Ref PrivateRouteTable1
-      # DestinationCidrBlock: 0.0.0.0/0
-      # NatGatewayId: !Ref NatGateway1
+  DefaultPrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
 
   PrivateSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -239,12 +244,12 @@ Resources:
         - Key: Name
           Value: !Sub ${NombreStack} Rutas Privadas (AZ2)
 
-  # DefaultPrivateRoute2:
-    # Type: AWS::EC2::Route
-    # Properties:
-      # RouteTableId: !Ref PrivateRouteTable2
-      # DestinationCidrBlock: 0.0.0.0/0
-      # NatGatewayId: !Ref NatGateway2
+  DefaultPrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
 
   PrivateSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -259,17 +264,17 @@ Resources:
       GroupDescription: "Security group para el load balancer"
       VpcId: !Ref VPC
       SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
-      - IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
       Tags:
-        - Key: name
+        - Key: Name
           Value: !Sub ${NombreStack} LoadBalancerSecurityGroup
   
   WebServerSG:
@@ -296,7 +301,7 @@ Resources:
         ToPort: 3306
         CidrIp: !Ref RedWeb2CIDR
       Tags:
-        - Key: name
+        - Key: Name
           Value: !Sub ${NombreStack} WebSecurityGroup
 
   DBServerSG:
@@ -339,16 +344,16 @@ Resources:
           ToPort: 80
           CidrIp: !Ref RedPublica2CIDR 
       Tags:
-        - Key: name
+        - Key: Name
           Value: !Sub ${NombreStack} BDSecurityGroup
-
+ 
   LaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
       LaunchTemplateName: !Sub ${NombreStack}-Launch-Template
       LaunchTemplateData:
         DisableApiTermination: true
-        ImageId: ami-0eddae5bc7d97abed
+        ImageId: !Ref IdAMI
         InstanceType: !Ref InstanceTier
         KeyName: !Ref SSHKeyWeb
         SecurityGroupIds:
@@ -357,6 +362,7 @@ Resources:
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
+      # AutoScalingGroupName: !Sub ${NombreStack} AutoScalingGroupString
       VPCZoneIdentifier:
         - !Ref RedWeb1
         - !Ref RedWeb2
@@ -368,12 +374,31 @@ Resources:
       DesiredCapacity: 2
       HealthCheckGracePeriod: 300
       MaxInstanceLifetime: 2592000
-      PropagateAtLaunch: true
-      TargetGroupARNs: 
-        - !Ref LoadBalancer
+      TargetGroupARNs:
+        - !Ref TargetGroup
       Tags:
-        - Key: name
-          Value: !Sub ${NombreStack} AutoScalingGroup
+        - Key: Name
+          Value: !Sub ${NombreStack} Instance
+          PropagateAtLaunch: true
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: '/var/www/html'
+      HealthCheckPort: 80
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 4
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      TargetType: instance
+      Tags:
+        - Key: Name
+          Value: !Sub ${NombreStack} TargetGroup
 
   HTTPlistener:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
@@ -401,7 +426,7 @@ Resources:
         - !Ref RedWeb2
       Type: application
       Tags: 
-        - Key: name
+        - Key: Name
           Value: !Sub ${NombreStack} Load Balancer
 
 Outputs:
@@ -448,3 +473,15 @@ Outputs:
   DBSecurityGroup:
     Description: Security group para bases de datos
     Value: !Ref DBServerSG
+
+  LaunchTemplate:
+    Description: Referencia del Launch Template
+    Value: !Ref LaunchTemplate
+
+  AutoScalingGroup:
+    Description: Referencia del AutoScalingGroup
+    Value: !Ref AutoScalingGroup
+
+  LoadBalancer:
+    Description: Referencia del LoadBalancer
+    Value: !Ref LoadBalancer
