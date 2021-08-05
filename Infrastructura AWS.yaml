@@ -396,9 +396,9 @@ Resources:
       Name: !Sub ${NombreStack}-LoadBalancer
       SecurityGroups:
         - !Ref NoIngressSecurityGroup
-      Subnets: 
-        - !Ref RedWeb1CIDR
-        - !Ref RedWeb2CIDR
+      SubnetMappings:
+        - !Ref RedWeb1
+        - !Ref RedWeb2
       Tags: 
         - name:
           Value: !Sub ${NombreStack} Load Balancer
