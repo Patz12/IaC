@@ -9,13 +9,13 @@
   - [x] NAT Gateway
   
 - EC2
-  - [ ] Web server
+  - [x] Web server
   - [ ] Load Balancer
   - [ ] Autoscaling groups
+  - [x] Security groups
 
 - Opcionales
-  - [ ] Security groups
-  - [ ] AMIs
+  - [x] AMIs
   - [x] Cuenta específica para IaC
 
 ### Referencias
