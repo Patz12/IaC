@@ -1,4 +1,4 @@
-# Proyecto Unidad 3: IaC y Git
+# IaC y Git
 
 ## Progreso
 
